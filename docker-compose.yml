@@ -1,0 +1,70 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app_network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+
+  backend:
+    container_name: nest-backend
+    build:
+      context: ./nest
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - JWT_SECRET=123abc
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CACHE_TTL=300000
+      - MONGODB_URI=mongodb://mongodb:27017/ecommerce
+      - NODE_ENV=development
+    volumes:
+      - ./nest:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - app_network
+
+  frontend:
+    container_name: nuxt
+    build:
+      context: ./nuxt
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+    volumes:
+      - ./nuxt:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  app_network:
+    driver: bridge
